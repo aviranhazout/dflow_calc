@@ -3,7 +3,40 @@
 
 #include "dflow_calc.h"
 
+#define REG_NUM 32
+class insruction
+{
+public:
+    int depth;
+    int dep1;
+    int dep2;
+};
+class prog_data
+{
+public:
+    insruction* ins_arr;
+    int reg_false_dep[REG_NUM];
+    int reg_last_write[REG_NUM];
+
+    prog_data(int inst_num)
+    {
+        ins_arr = new insruction[inst_num];
+        for (int i = 0; i < REG_NUM; i++)
+        {
+            reg_false_dep[i] = -1;
+            reg_last_write[i] = -1;
+        }
+    }
+};
+
 ProgCtx analyzeProg(const unsigned int opsLatency[], const InstInfo progTrace[], unsigned int numOfInsts) {
+    /*
+     * for all instructions
+     *      get dependencies
+     *      update reg_last_write
+     *      update depth by max of dependencies
+     *      false dependecies++
+     */
     return PROG_CTX_NULL;
 }
 
