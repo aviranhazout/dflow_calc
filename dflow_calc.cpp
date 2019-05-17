@@ -23,7 +23,7 @@ public:
 
     prog_data(int inst_num)
     {
-        ins_arr = new insruction[inst_num];
+        ins_arr = new instruction[inst_num];
         for (int i = 0; i < REG_NUM; i++)
         {
             reg_false_dep[i] = -1;
@@ -50,9 +50,9 @@ int getInstDepth(ProgCtx ctx, unsigned int theInst)
 {
     if (ctx == PROG_CTX_NULL)
         return -1;
+    prog_data* prog = (prog_data*)ctx;
     if (theInst >= prog->instruction_num)
         return -1;
-    prog_data* prog = (prog_data*)ctx;
     return prog->ins_arr[theInst].depth;
 }
 
@@ -60,9 +60,9 @@ int getInstDeps(ProgCtx ctx, unsigned int theInst, int *src1DepInst, int *src2De
 {
     if (ctx == PROG_CTX_NULL)
         return -1;
+    prog_data* prog = (prog_data*)ctx;
     if (theInst >= prog->instruction_num)
         return -1;
-    prog_data* prog = (prog_data*)ctx;
     *src1DepInst = prog->ins_arr[theInst].dep1;
     *src2DepInst = prog->ins_arr[theInst].dep2;
     return 0;
