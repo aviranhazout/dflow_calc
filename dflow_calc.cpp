@@ -32,6 +32,10 @@ public:
     }
 };
 
+int maxFunc(int first, int second){
+    return (first > second) ? first : second;
+}
+
 ProgCtx analyzeProg(const unsigned int opsLatency[], const InstInfo progTrace[], unsigned int numOfInsts) {
     /*
      * for all instructions
@@ -40,7 +44,46 @@ ProgCtx analyzeProg(const unsigned int opsLatency[], const InstInfo progTrace[],
      *      update depth by max of dependencies
      *      false dependecies++
      */
-    return PROG_CTX_NULL;
+    prog_data PD = new prog_data(numOfInsts);
+    for (int i = 0; i < numOfInsts; i++){
+        //initializes instruction array
+        PD.ins_arr[i] = new instruction;
+        //starts with no depth
+        PD.ins_arr[i].depth = 0;
+        //starts with opcode cycle
+        PD.ins_arr[i].exe_cycles = opsLatency[progTrace[i].opcode];
+        int tempDepth = 0;
+        int tempCycles = 0
+        //found dependency with previous instruction and save dep1 and dep2
+        for(int j = i; j > 0; j--){
+            if(PD.reg_last_write[progTrace[i].src1Idx] != -1){
+                PD.ins_arr[i].dep1 = PD.reg_last_write[progTrace[i].src1Idx];
+                //finds depth of previous instruction
+                tempDepth = PD.ins_arr[PD.ins_arr[i].dep1].depth;
+                //finds cycles needed to complete dependency
+                tempCycles = PD.ins_arr[PD.ins_arr[i].dep1].exe_cycles;
+            }
+            if(PD.reg_last_write[progTrace[i].src2Idx] != -1){
+                PD.ins_arr[i].dep2 = PD.reg_last_write[progTrace[i].src2Idx];
+                //compares two depths from registers used and selects deeper one
+                tempDepth = maxFunc(tempDepth, PD.ins_arr[PD.ins_arr[i].dep2].depth);
+                //compares two cycles from registers used and selects longer one
+                tempCycles = maxFunc(tempCycles, PD.ins_arr[PD.ins_arr[i].dep2].depth);
+                break;
+            }
+        }
+        PD.ins_arr[i].exe_cycles += tempCycles;
+        PD.ins_arr[i].depth = tempDepth;
+
+        //initializes register last written to array
+        PD.reg_last_write[progTrace[i].dstIdx] = i;
+
+        //increases number of registers written to, finding false dependencies
+        PD.reg_false_dep[progTrace[i].dstIdx]++;
+    }
+
+
+    return PD;
 }
 
 void freeProgCtx(ProgCtx ctx) {
