@@ -37,13 +37,13 @@ int maxFunc(int first, int second){
 }
 
 ProgCtx analyzeProg(const unsigned int opsLatency[], const InstInfo progTrace[], unsigned int numOfInsts) {
-    /*
-     * for all instructions
-     *      get dependencies
-     *      update reg_last_write
-     *      update depth by max of dependencies
-     *      false dependecies++
-     */
+    //
+    //  for all instructions
+    //  get dependencies
+    //  update reg_last_write
+    //  update depth by max of dependencies
+    //  false dependecies++
+
     prog_data PD = new prog_data(numOfInsts);
     for (int i = 0; i < numOfInsts; i++){
         //initializes instruction array
@@ -84,9 +84,49 @@ ProgCtx analyzeProg(const unsigned int opsLatency[], const InstInfo progTrace[],
 
 
     return PD;
-}
 
-void freeProgCtx(ProgCtx ctx) {
+
+}
+/*
+ProgCtx analyzeProg(const unsigned int opsLatency[], const InstInfo progTrace[], unsigned int numOfInsts)
+{
+    prog_data* prog = new prog_data(numOfInsts);
+    prog->instruction_num = numOfInsts;
+    int tmp_depth1, tmp_depth2, tmp, reg;
+    for (int i = 0; i < numOfInsts; i++)
+    {
+        prog->ins_arr[i].dep1 = prog->reg_last_write[progTrace[i].src1Idx];
+        prog->ins_arr[i].dep2 = prog->reg_last_write[progTrace[i].src2Idx];
+        prog->ins_arr[i].exe_cycles = opsLatency[progTrace[i].opcode];
+        if(prog->ins_arr[i].dep1 != -1)
+        {
+            tmp = prog->ins_arr[i].dep1;
+            tmp_depth1 = prog->ins_arr[tmp].depth + prog->ins_arr[tmp].exe_cycles;
+        }
+        else
+            tmp_depth1 = 0;
+        if(prog->ins_arr[i].dep2 != -1)
+        {
+            tmp = prog->ins_arr[i].dep2;
+            tmp_depth2 = prog->ins_arr[tmp].depth + prog->ins_arr[tmp].exe_cycles;
+        }
+        else
+            tmp_depth2 = 0;
+        prog->ins_arr[i].depth = (tmp_depth1 >= tmp_depth2) ? tmp_depth1 : tmp_depth2;
+        reg = progTrace[i].dstIdx;
+        prog->reg_false_dep[reg]++;
+        prog->reg_last_write[reg] = i;
+    }
+    return prog;
+}*/
+
+void freeProgCtx(ProgCtx ctx)
+{
+    if (ctx == PROG_CTX_NULL)
+        return;
+    prog_data *prog = (prog_data *) ctx;
+    free(prog->ins_arr);
+    free(prog);
 }
 
 int getInstDepth(ProgCtx ctx, unsigned int theInst)
