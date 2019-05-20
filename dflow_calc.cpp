@@ -12,6 +12,8 @@ public:
     int dep1;
     int dep2;
     int exe_cycles;
+    int opcode_cyc;
+    instruction* next_ins;
 };
 class prog_data
 {
@@ -23,7 +25,19 @@ public:
 
     prog_data(int inst_num)
     {
+        instruction_num = inst_num;
         ins_arr = new instruction[inst_num];
+        for (int j = 0; j < inst_num; ++j) {
+            ins_arr[j].dep1 = -1;
+            ins_arr[j].dep2 = -1;
+            ins_arr[j].exe_cycles = 0;
+            //starts with no depth
+            ins_arr[j].depth = 0;
+            //for testing - REMOVE BEFORE SUBMISSION
+            ins_arr[j].next_ins = nullptr;
+            if(j < inst_num -1)
+                ins_arr[j].next_ins = &ins_arr[j+1];
+        }
         for (int i = 0; i < REG_NUM; i++)
         {
             reg_false_dep[i] = -1;
@@ -35,51 +49,47 @@ public:
 int maxFunc(int first, int second){
     return (first > second) ? first : second;
 }
-
+//ProgCtx analyzeProg(const unsigned int opsLatency[], const InstInfo progTrace[], unsigned int numOfInsts);
+//ProgCtx analyzeProg(const unsigned int opsLatency[], const InstInfo progTrace[], unsigned int numOfInsts);
 ProgCtx analyzeProg(const unsigned int opsLatency[], const InstInfo progTrace[], unsigned int numOfInsts) {
     //
     //  for all instructions
     //  get dependencies
     //  update reg_last_write
     //  update depth by max of dependencies
-    //  false dependecies++
-
-    prog_data PD = new prog_data(numOfInsts);
+    //  false dependencies++
+    prog_data* PD = new prog_data(numOfInsts);
     for (int i = 0; i < numOfInsts; i++){
-        //initializes instruction array
-        PD.ins_arr[i] = new instruction;
-        //starts with no depth
-        PD.ins_arr[i].depth = 0;
         //starts with opcode cycle
-        PD.ins_arr[i].exe_cycles = opsLatency[progTrace[i].opcode];
+        PD->ins_arr[i].opcode_cyc = opsLatency[progTrace[i].opcode];
         int tempDepth = 0;
-        int tempCycles = 0
+        int tempCycles = 0;
         //found dependency with previous instruction and save dep1 and dep2
         for(int j = i; j > 0; j--){
-            if(PD.reg_last_write[progTrace[i].src1Idx] != -1){
-                PD.ins_arr[i].dep1 = PD.reg_last_write[progTrace[i].src1Idx];
+            if(PD->reg_last_write[progTrace[i].src1Idx] != -1){
+                PD->ins_arr[i].dep1 = PD->reg_last_write[progTrace[i].src1Idx];
                 //finds depth of previous instruction
-                tempDepth = PD.ins_arr[PD.ins_arr[i].dep1].depth;
+                tempDepth = PD->ins_arr[PD->ins_arr[i].dep1].depth;
                 //finds cycles needed to complete dependency
-                tempCycles = PD.ins_arr[PD.ins_arr[i].dep1].exe_cycles;
+                tempCycles = PD->ins_arr[PD->ins_arr[i].dep1].exe_cycles;
             }
-            if(PD.reg_last_write[progTrace[i].src2Idx] != -1){
-                PD.ins_arr[i].dep2 = PD.reg_last_write[progTrace[i].src2Idx];
+            if(PD->reg_last_write[progTrace[i].src2Idx] != -1){
+                PD->ins_arr[i].dep2 = PD->reg_last_write[progTrace[i].src2Idx];
                 //compares two depths from registers used and selects deeper one
-                tempDepth = maxFunc(tempDepth, PD.ins_arr[PD.ins_arr[i].dep2].depth);
+                tempDepth = maxFunc(tempDepth, PD->ins_arr[PD->ins_arr[i].dep2].depth);
                 //compares two cycles from registers used and selects longer one
-                tempCycles = maxFunc(tempCycles, PD.ins_arr[PD.ins_arr[i].dep2].depth);
+                tempCycles = maxFunc(tempCycles, PD->ins_arr[PD->ins_arr[i].dep2].depth);
                 break;
             }
         }
-        PD.ins_arr[i].exe_cycles += tempCycles;
-        PD.ins_arr[i].depth = tempDepth;
+        PD->ins_arr[i].exe_cycles = PD->ins_arr[i].opcode_cyc + tempCycles;
+        PD->ins_arr[i].depth = tempDepth;
 
         //initializes register last written to array
-        PD.reg_last_write[progTrace[i].dstIdx] = i;
+        PD->reg_last_write[progTrace[i].dstIdx] = i;
 
         //increases number of registers written to, finding false dependencies
-        PD.reg_false_dep[progTrace[i].dstIdx]++;
+        PD->reg_false_dep[progTrace[i].dstIdx]++;
     }
 
 
@@ -125,8 +135,8 @@ void freeProgCtx(ProgCtx ctx)
     if (ctx == PROG_CTX_NULL)
         return;
     prog_data *prog = (prog_data *) ctx;
-    free(prog->ins_arr);
-    free(prog);
+    delete prog->ins_arr;
+    delete prog;
 }
 
 int getInstDepth(ProgCtx ctx, unsigned int theInst)
@@ -136,7 +146,7 @@ int getInstDepth(ProgCtx ctx, unsigned int theInst)
     prog_data* prog = (prog_data*)ctx;
     if (theInst >= prog->instruction_num)
         return -1;
-    return prog->ins_arr[theInst].depth;
+    return prog->ins_arr[theInst].exe_cycles - prog->ins_arr[theInst].opcode_cyc;
 }
 
 int getInstDeps(ProgCtx ctx, unsigned int theInst, int *src1DepInst, int *src2DepInst)
@@ -158,6 +168,8 @@ int getRegfalseDeps(ProgCtx ctx, unsigned int reg)
     if (reg > REG_NUM)
 	    return -1;
     prog_data* prog = (prog_data*)ctx;
+    if (prog->reg_false_dep[reg] == -1)
+        return 0;
     return prog->reg_false_dep[reg];
 }
 
