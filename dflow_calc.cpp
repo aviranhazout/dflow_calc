@@ -2,6 +2,7 @@
 /* Implementation (skeleton)  for the dataflow statistics calculator */
 
 #include "dflow_calc.h"
+#include <stdio.h>
 
 #define REG_NUM 32
 
@@ -40,7 +41,7 @@ public:
         }
         for (int i = 0; i < REG_NUM; i++)
         {
-            reg_false_dep[i] = -1;
+            reg_false_dep[i] = 0;
             reg_last_write[i] = -1;
         }
     }
@@ -51,45 +52,48 @@ int maxFunc(int first, int second){
 }
 //ProgCtx analyzeProg(const unsigned int opsLatency[], const InstInfo progTrace[], unsigned int numOfInsts);
 //ProgCtx analyzeProg(const unsigned int opsLatency[], const InstInfo progTrace[], unsigned int numOfInsts);
-ProgCtx analyzeProg(const unsigned int opsLatency[], const InstInfo progTrace[], unsigned int numOfInsts) {
-    //
-    //  for all instructions
-    //  get dependencies
-    //  update reg_last_write
-    //  update depth by max of dependencies
-    //  false dependencies++
+//
+//  for all instructions
+//  get dependencies
+//  update reg_last_write
+//  update depth by max of dependencies
+//  false dependencies++
+ProgCtx analyzeProg(const unsigned int opsLatency[],  InstInfo progTrace[], unsigned int numOfInsts)
+{
     prog_data* PD = new prog_data(numOfInsts);
+    PD->instruction_num = numOfInsts;
+    unsigned int tmp_depth1, tmp_depth2, tmp;
     for (int i = 0; i < numOfInsts; i++){
         //starts with opcode cycle
         PD->ins_arr[i].opcode_cyc = opsLatency[progTrace[i].opcode];
         int tempDepth = 0;
         int tempCycles = 0;
-        //found dependency with previous instruction and save dep1 and dep2
-        for(int j = i; j > 0; j--){
-            if(PD->reg_last_write[progTrace[i].src1Idx] != -1){
-                PD->ins_arr[i].dep1 = PD->reg_last_write[progTrace[i].src1Idx];
-                //finds depth of previous instruction
-                tempDepth = PD->ins_arr[PD->ins_arr[i].dep1].depth;
-                //finds cycles needed to complete dependency
-                tempCycles = PD->ins_arr[PD->ins_arr[i].dep1].exe_cycles;
-            }
-            if(PD->reg_last_write[progTrace[i].src2Idx] != -1){
-                PD->ins_arr[i].dep2 = PD->reg_last_write[progTrace[i].src2Idx];
-                //compares two depths from registers used and selects deeper one
-                tempDepth = maxFunc(tempDepth, PD->ins_arr[PD->ins_arr[i].dep2].depth);
-                //compares two cycles from registers used and selects longer one
-                tempCycles = maxFunc(tempCycles, PD->ins_arr[PD->ins_arr[i].dep2].depth);
-                break;
-            }
-        }
-        PD->ins_arr[i].exe_cycles = PD->ins_arr[i].opcode_cyc + tempCycles;
-        PD->ins_arr[i].depth = tempDepth;
 
+        PD->ins_arr[i].dep1 = PD->reg_last_write[progTrace[i].src1Idx];
+        PD->ins_arr[i].dep2 = PD->reg_last_write[progTrace[i].src2Idx];
+        PD->ins_arr[i].exe_cycles = opsLatency[progTrace[i].opcode];
+        if(PD->ins_arr[i].dep1 != -1)
+        {
+            tmp = PD->ins_arr[i].dep1;
+            tmp_depth1 = PD->ins_arr[tmp].depth + PD->ins_arr[tmp].exe_cycles;
+        }
+        else
+            tmp_depth1 = 0;
+        if(PD->ins_arr[i].dep2 != -1)
+        {
+            tmp = PD->ins_arr[i].dep2;
+            tmp_depth2 = PD->ins_arr[tmp].depth + PD->ins_arr[tmp].exe_cycles;
+        }
+        else
+            tmp_depth2 = 0;
+        PD->ins_arr[i].depth = maxFunc(tmp_depth1, tmp_depth2);
         //initializes register last written to array
         PD->reg_last_write[progTrace[i].dstIdx] = i;
 
         //increases number of registers written to, finding false dependencies
-        PD->reg_false_dep[progTrace[i].dstIdx]++;
+        int reg = progTrace[i].dstIdx;
+        if (reg == progTrace[i - 1].dstIdx || reg == progTrace[i - 1].src1Idx || reg == progTrace[i - 1].src2Idx)
+            PD->reg_false_dep[progTrace[i].dstIdx]++;
     }
 
 
@@ -97,38 +101,6 @@ ProgCtx analyzeProg(const unsigned int opsLatency[], const InstInfo progTrace[],
 
 
 }
-/*
-ProgCtx analyzeProg(const unsigned int opsLatency[], const InstInfo progTrace[], unsigned int numOfInsts)
-{
-    prog_data* prog = new prog_data(numOfInsts);
-    prog->instruction_num = numOfInsts;
-    int tmp_depth1, tmp_depth2, tmp, reg;
-    for (int i = 0; i < numOfInsts; i++)
-    {
-        prog->ins_arr[i].dep1 = prog->reg_last_write[progTrace[i].src1Idx];
-        prog->ins_arr[i].dep2 = prog->reg_last_write[progTrace[i].src2Idx];
-        prog->ins_arr[i].exe_cycles = opsLatency[progTrace[i].opcode];
-        if(prog->ins_arr[i].dep1 != -1)
-        {
-            tmp = prog->ins_arr[i].dep1;
-            tmp_depth1 = prog->ins_arr[tmp].depth + prog->ins_arr[tmp].exe_cycles;
-        }
-        else
-            tmp_depth1 = 0;
-        if(prog->ins_arr[i].dep2 != -1)
-        {
-            tmp = prog->ins_arr[i].dep2;
-            tmp_depth2 = prog->ins_arr[tmp].depth + prog->ins_arr[tmp].exe_cycles;
-        }
-        else
-            tmp_depth2 = 0;
-        prog->ins_arr[i].depth = (tmp_depth1 >= tmp_depth2) ? tmp_depth1 : tmp_depth2;
-        reg = progTrace[i].dstIdx;
-        prog->reg_false_dep[reg]++;
-        prog->reg_last_write[reg] = i;
-    }
-    return prog;
-}*/
 
 void freeProgCtx(ProgCtx ctx)
 {
@@ -146,7 +118,7 @@ int getInstDepth(ProgCtx ctx, unsigned int theInst)
     prog_data* prog = (prog_data*)ctx;
     if (theInst >= prog->instruction_num)
         return -1;
-    return prog->ins_arr[theInst].exe_cycles - prog->ins_arr[theInst].opcode_cyc;
+    return prog->ins_arr[theInst].depth;
 }
 
 int getInstDeps(ProgCtx ctx, unsigned int theInst, int *src1DepInst, int *src2DepInst)
