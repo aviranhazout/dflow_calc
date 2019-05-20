@@ -92,8 +92,11 @@ ProgCtx analyzeProg(const unsigned int opsLatency[],  InstInfo progTrace[], unsi
 
         //increases number of registers written to, finding false dependencies
         int reg = progTrace[i].dstIdx;
-        if (reg == progTrace[i - 1].dstIdx || reg == progTrace[i - 1].src1Idx || reg == progTrace[i - 1].src2Idx)
+        if (i > 0 &&
+          (reg == progTrace[i - 1].dstIdx || reg == progTrace[i - 1].src1Idx || reg == progTrace[i - 1].src2Idx))
+        {
             PD->reg_false_dep[progTrace[i].dstIdx]++;
+        }
     }
 
 
