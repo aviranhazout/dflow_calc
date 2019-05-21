@@ -58,7 +58,7 @@ int maxFunc(int first, int second){
 //  update reg_last_write
 //  update depth by max of dependencies
 //  false dependencies++
-ProgCtx analyzeProg(const unsigned int opsLatency[],  InstInfo progTrace[], unsigned int numOfInsts)
+ProgCtx analyzeProg(const unsigned int opsLatency[], InstInfo progTrace[], int numOfInsts)
 {
     prog_data* PD = new prog_data(numOfInsts);
     PD->instruction_num = numOfInsts;
